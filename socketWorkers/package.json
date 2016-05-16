@@ -1,0 +1,10 @@
+{
+  "name": "socketWorkers",
+  "version": "0.1.0",
+  "description": "Project which shows iterprocess communication in nodejs using tcp sockets.",
+  "main": "master.js",
+  "author": "Oleg Klishch",
+  "dependencies": {
+    "uuid": "^2.0.2"
+  }
+}
