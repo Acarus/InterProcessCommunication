@@ -11,17 +11,19 @@ function processData(data) {
     });
 }
 
-var client = api.net.connect({
-    port: HOST,
-    host: PORT
-});
-
-client.on('data', function(data) {
-    var request = JSON.parse(data);
-    var response = {
-        uuid: request.uuid,
-        data: processData(request.data)
-    };
-    client.write(JSON.stringify(response));
-    client.end();
+var socket = new api.net.Socket();
+socket.connect({
+    port: PORT,
+    host: HOST
+}, function() {
+    socket.on('data', function(data) {
+        var request = JSON.parse(data);
+        console.dir(request);
+        var response = {
+            uuid: request.uuid,
+            data: processData(request.data)
+        };
+        socket.write(JSON.stringify(response));
+        socket.end();
+    });
 });
