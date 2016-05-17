@@ -1,6 +1,6 @@
 const NUMBER_OF_WORKERS = 5;
 const LISTEN_PORT = 8848;
-const partitionSize = 3;
+const PARTITION_SIZE = 3;
 
 global.api = {};
 api.proccess = require('child_process');
