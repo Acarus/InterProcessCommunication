@@ -1,4 +1,3 @@
-const NUMBER_OF_WORKERS = 5;
 const LISTEN_PORT = 8848;
 const PARTITION_SIZE = 3;
 
@@ -26,11 +25,11 @@ function divideTask(data) {
         pos = 0;
     while (pos < data.length) {
         var subTask = {
-            data: data.slice(pos, Math.min(pos + partitionSize, data.length - 1)),
+            data: data.slice(pos, Math.min(pos + PARTITION_SIZE, data.length - 1)),
             state: 'IN_QUEUE'
         };
         subTasks.push(subTask);
-        pos += partitionSize;
+        pos += PARTITION_SIZE;
     }
     return subTasks;
 }
@@ -54,16 +53,18 @@ function runServer(port) {
     api.net.createServer(function(socket) {
         console.log('New client connected');
         socket.on('data', function(req) {
-            var request = JSON.parse(req);
+            var response, request = JSON.parse(req);
             if (request.type === 'register') {
-                var clientId = api.uuid.v1();
-                clients[clientId] = {type: request.clientType};
-                var response = {status: 'ok', uuid: clientId};
+                var clientToken = api.uuid.v1();
+                clients[clientToken] = {type: request.clientType, connection: socket};
+                response = {type: 'register', status: 'ok', token: clientToken};
                 socket.write(JSON.stringify(response));
             } else if(request.type === 'submit') {
-                if (isCustomer(request.uuid)) {
+                if (isCustomer(request.token)) {
                     var taskId = createTask(request.task);
                     addTaskToQueue(taskId);
+                    response = {type: 'submit', status: 'ok', taskId: taskId};
+                    socket.write(JSON.stringify(response));
                 } else {
                     // forbidden
                 }
