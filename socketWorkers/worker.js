@@ -1,48 +1,68 @@
-const HOST = '127.0.0.1';
-const PORT = 8848;
-
-var api = {};
-global.api = api;
-api.net = require('net');
-
 function getRegistrationQuery() {
     var query = {
-        type: 'register',
-        clientType: 'worker'
+        type: api.constants.query.REGISTER,
+        clientType: api.constants.client.WORKER
     };
     return JSON.stringify(query);
 }
 
-function getConnection() {
+function getConnection(handlers) {
     var socket = new api.net.Socket();
     socket.connect({
-        port: PORT,
-        host: HOST
+        port: api.constants.PORT,
+        host: api.constants.HOST
     });
+    addResponseHandlers(socket, handlers);
     return socket;
 }
 
-function register(callback) {
-    var socket = getConnection();
-    socket.on('data', function(res) {
-        var response = JSON.parse(res);
-        if (response.status === 'ok') {
-            var token = response.token;
-            console.log('Successfully registered. Token: %s.', token);
-            callback(response.status, token);
+function addResponseHandlers(socket, handlers) {
+    socket.on('data', function (req) {
+        console.log('Received: %s', req);
+        var request = JSON.parse(req);
+        if (handlers.hasOwnProperty(request.type)) {
+            var response = handlers[request.type](request);
+            if (response) {
+                console.log('Response from %s: %s', request.type, JSON.stringify(response));
+                socket.write(JSON.stringify(response));
+            }
         } else {
-            console.error('Can not register.');
-            callback(response.status)
+            console.warn('Received unsupported request of type: %s', request.type);
         }
-        socket.end();
     });
+}
+
+function register(handlers) {
+    var socket = getConnection(handlers);
     socket.write(getRegistrationQuery());
 }
 
-function onRegistered(status, token) {
-    if (status === 'ok') {
+function onRegistered(response) {
+    if (response.status === api.constants.status.OK) {
         console.log('Can process tasks.');
+        token = response.token;
     }
 }
 
-register(onRegistered);
+function processTask(request) {
+    console.log('Start processing new task: %s', JSON.stringify(request));
+    console.log('token: %s', token);
+    var response = {
+        type: api.constants.query.TASK_PROCESSED,
+        status: api.constants.status.OK,
+        task: request.task,
+        token: token
+    };
+    response.task.data = response.task.data.map(function(item) {
+        return item * 2
+    });
+    return response;
+}
+
+var api = {};
+global.api = api;
+api.net = require('net');
+api.constants = require('./constants.js');
+
+var token, handlers = {register: onRegistered, newTask: processTask};
+register(handlers);
